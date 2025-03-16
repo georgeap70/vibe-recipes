@@ -18,27 +18,39 @@ import {
   ListItem,
   Spinner,
   useToast,
-  HStack
+  HStack,
+  Image,
+  Badge
 } from '@chakra-ui/react'
 import axios from 'axios'
 
 interface Recipe {
-  id: number
+  id: string
   title: string
   image: string
   instructions: string
+  category: string
+  area: string
   extendedIngredients: Array<{
     original: string
   }>
 }
 
 const dietaryOptions = [
-  'vegetarian',
-  'vegan',
-  'gluten-free',
-  'ketogenic',
-  'paleo',
-  'low-carb'
+  'Beef',
+  'Breakfast',
+  'Chicken',
+  'Dessert',
+  'Goat',
+  'Lamb',
+  'Miscellaneous',
+  'Pasta',
+  'Pork',
+  'Seafood',
+  'Side',
+  'Starter',
+  'Vegan',
+  'Vegetarian'
 ]
 
 function RecipeSearch() {
@@ -50,8 +62,13 @@ function RecipeSearch() {
   const toast = useToast()
 
   const handleAddIngredient = () => {
-    if (currentIngredient.trim() && !ingredients.includes(currentIngredient.trim())) {
-      setIngredients([...ingredients, currentIngredient.trim()])
+    const trimmedIngredient = currentIngredient.trim().toLowerCase()
+    if (trimmedIngredient && !ingredients.includes(trimmedIngredient)) {
+      // Remove any special characters and multiple spaces
+      const cleanedIngredient = trimmedIngredient
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, ' ')
+      setIngredients([...ingredients, cleanedIngredient])
       setCurrentIngredient('')
     }
   }
@@ -90,6 +107,16 @@ function RecipeSearch() {
         preferences
       })
       setRecipes(response.data)
+      
+      if (response.data.length === 0) {
+        toast({
+          title: 'No recipes found',
+          description: 'Try different ingredients or dietary preferences.',
+          status: 'info',
+          duration: 3000,
+          isClosable: true,
+        })
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -110,7 +137,7 @@ function RecipeSearch() {
           <Input
             value={currentIngredient}
             onChange={(e) => setCurrentIngredient(e.target.value)}
-            placeholder="Enter an ingredient"
+            placeholder="Enter an ingredient (e.g., chicken, tomato, rice)"
             onKeyPress={(e) => e.key === 'Enter' && handleAddIngredient()}
           />
           <Button onClick={handleAddIngredient}>Add</Button>
@@ -134,10 +161,10 @@ function RecipeSearch() {
       </Box>
 
       <Box>
-        <Text mb={2} fontSize="lg" fontWeight="bold">Dietary Preferences</Text>
+        <Text mb={2} fontSize="lg" fontWeight="bold">Meal Type</Text>
         <HStack>
           <Select
-            placeholder="Select preference"
+            placeholder="Select meal type"
             onChange={handlePreferenceChange}
             value=""
           >
@@ -169,7 +196,7 @@ function RecipeSearch() {
       <Button
         colorScheme="blue"
         onClick={searchRecipes}
-        disabled={loading}
+        isLoading={loading}
         loadingText="Searching..."
       >
         Search Recipes
@@ -180,11 +207,23 @@ function RecipeSearch() {
           <Spinner size="xl" />
         </Box>
       ) : (
-        <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
           {recipes.map((recipe) => (
-            <Card key={recipe.id}>
+            <Card key={recipe.id} overflow="hidden">
+              <Image
+                src={recipe.image}
+                alt={recipe.title}
+                objectFit="cover"
+                height="200px"
+              />
               <CardHeader>
-                <Heading size="md">{recipe.title}</Heading>
+                <Stack>
+                  <Heading size="md">{recipe.title}</Heading>
+                  <HStack>
+                    <Badge colorScheme="green">{recipe.category}</Badge>
+                    <Badge colorScheme="orange">{recipe.area}</Badge>
+                  </HStack>
+                </Stack>
               </CardHeader>
               <CardBody>
                 <Stack spacing={4}>
@@ -198,7 +237,7 @@ function RecipeSearch() {
                   </Box>
                   <Box>
                     <Text fontWeight="bold" mb={2}>Instructions:</Text>
-                    <Text>{recipe.instructions}</Text>
+                    <Text whiteSpace="pre-line">{recipe.instructions}</Text>
                   </Box>
                 </Stack>
               </CardBody>
