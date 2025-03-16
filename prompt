@@ -1,0 +1,12 @@
+I want an application that gives me healthy recipies given a list of ingredients. 
+
+The application will need to have a user interface where the user will specifiy a list 
+of ingredients. In addition the user will specify some properties of the recipy, for example 
+"low calorie" 
+
+Then the application will provide a list of 3 recipies with a complete list of ingredients and 
+instructions. 
+
+I want the frontend to be using react and the backend python. 
+
+Figure out what is a good database of recipies to use
