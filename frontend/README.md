@@ -51,4 +51,12 @@ export default tseslint.config({
     ...reactDom.configs.recommended.rules,
   },
 })
+
+## Environment Variables
+
+To configure the application, create a `.env` file in the `frontend` directory. For development, you can use `.env.development`.
+
+-   `VITE_API_BASE_URL`: The base URL for the backend API.
+    Example for development: `VITE_API_BASE_URL=http://localhost:5000`
+    Example for production: `VITE_API_BASE_URL=https://your-deployed-api.com`
 ```
