@@ -24,6 +24,10 @@ import {
 } from '@chakra-ui/react'
 import axios from 'axios'
 
+// Define the API URL, using Vite's environment variable system
+// Fallback to localhost:5000 if the env var is not set
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
 interface Recipe {
   id: string
   title: string
@@ -102,7 +106,8 @@ function RecipeSearch() {
 
     setLoading(true)
     try {
-      const response = await axios.post('http://localhost:5000/api/recipes', {
+      // const response = await axios.post('http://localhost:5000/api/recipes', {
+      const response = await axios.post(`${API_URL}/api/recipes`, {
         ingredients,
         preferences
       })

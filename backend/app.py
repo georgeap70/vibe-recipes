@@ -1,24 +1,82 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import requests
 import logging
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
+# Configure logging - for production, INFO level is recommended.
+# Consider making the log level configurable e.g. via an environment variable:
+# import os
+# log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
+# logging.basicConfig(level=log_level)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+# Enable CORS for all routes and all origins.
+# For a production environment where the frontend has a specific domain,
+# it's recommended to restrict origins, for example:
+# from flask_cors import CORS
+# CORS(app, resources={r"/api/*": {"origins": ["https://your-frontend-domain.com", "http://localhost:3000"]}})
+# Initialize CORS after other app configurations
 CORS(app)
+
+# Initialize Flask-Limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour", "5 per minute"],
+    storage_uri="memory://", # Use "memory://" for in-process, or e.g. "redis://localhost:6379" for distributed
+)
 
 # TheMealDB API configuration
 MEALDB_BASE_URL = 'https://www.themealdb.com/api/json/v1/1'
 
 @app.route('/api/recipes', methods=['POST'])
+@limiter.limit("10 per minute") # Specific limit for this route
 def get_recipes():
     try:
         data = request.json
         ingredients = data.get('ingredients', [])
         dietary_preferences = data.get('preferences', [])
+
+        MAX_INGREDIENTS = 20
+        MAX_INGREDIENT_LENGTH = 100
+        MAX_PREFERENCES = 10
+        MAX_PREFERENCE_LENGTH = 50
+
+        if not isinstance(ingredients, list):
+            logger.warning("Invalid type for ingredients.")
+            return jsonify({'error': 'Invalid input: ingredients must be a list.'}), 400
+        
+        if len(ingredients) > MAX_INGREDIENTS:
+            logger.warning(f"Too many ingredients: {len(ingredients)}")
+            return jsonify({'error': f'Invalid input: Maximum number of ingredients is {MAX_INGREDIENTS}.'}), 400
+        
+        for ingredient in ingredients:
+            if not isinstance(ingredient, str):
+                logger.warning(f"Invalid type for ingredient: {type(ingredient)}")
+                return jsonify({'error': 'Invalid input: each ingredient must be a string.'}), 400
+            if len(ingredient) > MAX_INGREDIENT_LENGTH:
+                logger.warning(f"Ingredient too long: {len(ingredient)}")
+                return jsonify({'error': f'Invalid input: Ingredient length cannot exceed {MAX_INGREDIENT_LENGTH} characters.'}), 400
+
+        if not isinstance(dietary_preferences, list):
+            logger.warning("Invalid type for preferences.")
+            return jsonify({'error': 'Invalid input: preferences must be a list.'}), 400
+
+        if len(dietary_preferences) > MAX_PREFERENCES:
+            logger.warning(f"Too many preferences: {len(dietary_preferences)}")
+            return jsonify({'error': f'Invalid input: Maximum number of preferences is {MAX_PREFERENCES}.'}), 400
+
+        for preference in dietary_preferences:
+            if not isinstance(preference, str):
+                logger.warning(f"Invalid type for preference: {type(preference)}")
+                return jsonify({'error': 'Invalid input: each preference must be a string.'}), 400
+            if len(preference) > MAX_PREFERENCE_LENGTH:
+                logger.warning(f"Preference too long: {len(preference)}")
+                return jsonify({'error': f'Invalid input: Preference length cannot exceed {MAX_PREFERENCE_LENGTH} characters.'}), 400
         
         logger.debug(f"Received request with ingredients: {ingredients}, preferences: {dietary_preferences}")
         
@@ -130,7 +188,8 @@ def get_recipes():
     
     except Exception as e:
         logger.error(f"Error occurred: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': "An internal server error occurred. Please try again later."}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Set debug=True for development only, for example, by checking an environment variable.
+    app.run(debug=False)
